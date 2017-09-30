@@ -101,12 +101,13 @@ class USGSService:
         responses = []
         magnitudes = []
         for response in await asyncio.gather(*futures):
-            response = json.loads(response.text)
-            responses.append(response)
-            for result in responses:
-                for row in result['features']:
-                    if row["properties"].get("mag"):
-                        magnitudes.append(row['properties']['mag'])
+            if response:
+                response = json.loads(response.text)
+                responses.append(response)
+                for result in responses:
+                    for row in result['features']:
+                        if row["properties"].get("mag"):
+                            magnitudes.append(row['properties']['mag'])
 
         return magnitudes
 
@@ -134,7 +135,7 @@ def visualize_earthquake(magnitudes):
     """
 
     # Plot a histogram.
-    n, bins, patch = plot.hist(magnitudes, histtype='step', range=(5.5, 9.5), bins=10)
+    n, bins, patch = plot.hist(magnitudes, histtype='step', range=(0, 8), bins=8)
 
     # Draw histogram of the DataFrame’s series
     histogram = pd.DataFrame()
