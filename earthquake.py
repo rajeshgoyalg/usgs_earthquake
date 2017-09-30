@@ -3,6 +3,7 @@ import math
 import urllib3
 import datetime
 import matplotlib.pyplot as plot
+import pandas as pd
 
 
 class USGSService:
@@ -134,12 +135,23 @@ def main():
     # collect all magnitide data for data visualization
     magnitudes = service.fetch_magnitude_data()
 
-    # Plot Histogram of magnitude data
-    colors = ['skyblue']
-    plot.hist(magnitudes, bins=[0, 1, 2, 3, 4, 5, 6, 7], normed=0, histtype='bar', color=colors, label=colors)
-    plot.xlabel('Magnitudes')
-    plot.ylabel('Frequency')
-    plot.title('Histogram')
+    # Plot a histogram.
+    n, bins, patch = plot.hist(magnitudes, histtype='step', range=(5.5, 9.5), bins=10)
+    plot.xlabel("Earthquake Magnitudes")
+    plot.ylabel("Frequency")
+    plot.title("Frequency by Magnitude")
+    # Draw histogram of the DataFrame’s series
+    histogram = pd.DataFrame()
+    for i in range(0, len(n)):
+        magnitude_range = str(bins[i]) + " - " + str(bins[i + 1])
+        frequency = n[i]
+        percentage = round((n[i] / len(magnitudes)) * 100, 4)
+        histogram = histogram.append(pd.Series([magnitude_range, frequency, percentage]), ignore_index=True)
+
+    histogram.columns = ['Range of Magnitude', 'Frequency', 'Percentage']
+    print(histogram)
+
+    # Plot Histogram from magnitude data
     plot.show()
     plot.clf()
 
