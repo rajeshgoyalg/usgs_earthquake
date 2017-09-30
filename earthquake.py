@@ -1,6 +1,7 @@
 import json
 import math
 import asyncio
+import concurrent.futures
 import requests
 import datetime
 import matplotlib.pyplot as plot
@@ -56,6 +57,7 @@ class USGSService:
         int: Returns total number of requests
         """
         record_count = self.get_record_count()
+        print('Total records found for your search: %s' % record_count)
         return math.ceil(float(record_count) / self.LIMIT)
 
     def make_request(self, method):
@@ -94,20 +96,20 @@ class USGSService:
         :return: 
         List: List of magnitude
         """
-        loop = asyncio.get_event_loop()
-        params = self.create_request_params()
-        futures = [loop.run_in_executor(None, requests.get, self.SERVICE_URL + 'query', params[i]) for i in range(len(params))]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            loop = asyncio.get_event_loop()
+            params = self.create_request_params()
+            futures = [loop.run_in_executor(executor, requests.get, self.SERVICE_URL + 'query', params[i]) for i in range(len(params))]
 
-        responses = []
-        magnitudes = []
-        for response in await asyncio.gather(*futures):
-            if response:
-                response = json.loads(response.text)
-                responses.append(response)
-                for result in responses:
-                    for row in result['features']:
-                        if row["properties"].get("mag"):
-                            magnitudes.append(row['properties']['mag'])
+            responses = []
+            magnitudes = []
+            for response in await asyncio.gather(*futures):
+                if response:
+                    response = json.loads(response.text)
+                    responses.append(response)
+                    for result in responses:
+                        for row in result['features']:
+                            row["properties"].get("mag") and magnitudes.append(row['properties']['mag'])
 
         return magnitudes
 
@@ -135,14 +137,14 @@ def visualize_earthquake(magnitudes):
     """
 
     # Plot a histogram.
-    n, bins, patch = plot.hist(magnitudes, histtype='step', range=(0, 8), bins=8)
+    n, bins, patch = plot.hist(magnitudes, histtype='step', range=(0, 10), bins=10)
 
     # Draw histogram of the DataFrame’s series
     histogram = pd.DataFrame()
     for i in range(0, len(n)):
         magnitude_range = str(bins[i]) + " - " + str(bins[i + 1])
         frequency = n[i]
-        percentage = round((n[i] / len(magnitudes)) * 100, 4)
+        percentage = round((n[i] / len(magnitudes)) * 100, 4) if magnitudes else 0
         histogram = histogram.append(pd.Series([magnitude_range, frequency, percentage]), ignore_index=True)
 
     histogram.columns = ['Range of Magnitude', 'Frequency', 'Percentage']
@@ -157,6 +159,7 @@ def visualize_earthquake(magnitudes):
 
 
 def main():
+    print('Welcome to Earthquake visualisation. Please provide date range for your search.')
     date_entry = input('Enter start date in YYYY-MM-DD format: ')
     start_date = validate_date(date_entry)
 
