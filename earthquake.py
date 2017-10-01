@@ -6,6 +6,7 @@ import requests
 import datetime
 import matplotlib.pyplot as plot
 import pandas as pd
+from constants import SERVICE_URL, SERVICE_LIMIT
 
 
 class USGSService:
@@ -16,15 +17,14 @@ class USGSService:
     * `end_date`: accepts date in 'YYYY-MM-DD' format    
     """
 
-    SERVICE_API_VERSION = '1.5.8'
-    SERVICE_URL = "https://earthquake.usgs.gov/fdsnws/event/1/"
-    LIMIT = 20000
     Offset = 1
     ServiceParams = {}
 
-    def __init__(self, start_date, end_date):
-        self.StartDate = start_date
-        self.EndDate = end_date
+    def __init__(self, start_date='', end_date=''):
+        if start_date != "":
+            self.StartDate = start_date
+        if end_date != "":
+            self.EndDate = end_date
 
     def check_api_version(self):
         """
@@ -33,9 +33,7 @@ class USGSService:
         """
         self.ServiceParams['format'] = 'quakeml'
         result = self.make_request('version')
-        result = result.text
-        if result != self.SERVICE_API_VERSION:
-            raise Exception('Current USGS API Version : ' + result + ' Expected : ' + self.SERVICE_API_VERSION)
+        return result.text
 
     def get_record_count(self):
         """
@@ -58,7 +56,7 @@ class USGSService:
         """
         record_count = self.get_record_count()
         print('Total records found for your search: %s' % record_count)
-        return math.ceil(float(record_count) / self.LIMIT)
+        return math.ceil(float(record_count) / SERVICE_LIMIT)
 
     def make_request(self, method):
         """
@@ -67,7 +65,8 @@ class USGSService:
         :return: 
         Object: Object of response
         """
-        return requests.get(self.SERVICE_URL + method, self.ServiceParams)
+        result = requests.get(SERVICE_URL + method, self.ServiceParams)
+        return result if result.ok else None
 
     def create_request_params(self):
         """
@@ -79,14 +78,14 @@ class USGSService:
             'format': 'geojson',
             'starttime': self.StartDate,
             'endtime': self.EndDate,
-            'limit': self.LIMIT
+            'limit': SERVICE_LIMIT
         }
         total_requests = self.request_count()
         for x in range(total_requests):
             param['offset'] = self.Offset
             params.append(param)
             # increase offset to fetch next set of records
-            self.Offset = self.Offset + self.LIMIT
+            self.Offset = self.Offset + SERVICE_LIMIT
 
         return params
 
@@ -99,7 +98,7 @@ class USGSService:
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
             loop = asyncio.get_event_loop()
             params = self.create_request_params()
-            futures = [loop.run_in_executor(executor, requests.get, self.SERVICE_URL + 'query', params[i]) for i in range(len(params))]
+            futures = [loop.run_in_executor(executor, requests.get, SERVICE_URL + 'query', params[i]) for i in range(len(params))]
 
             responses = []
             magnitudes = []
