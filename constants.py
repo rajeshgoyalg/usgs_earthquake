@@ -1,3 +1,7 @@
+"""
+List of all constants used in the Earthquake Visualization
+"""
+
 import os
 
 SERVICE_URL = 'https://earthquake.usgs.gov/fdsnws/event/1/'
