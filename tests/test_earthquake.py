@@ -1,26 +1,41 @@
+"""
+    Earthquake - Unit and Integration Test cases
+"""
 from unittest.mock import patch
 from unittest import skipIf
-from nose.tools import assert_is_none, assert_is_not_none, assert_equal, assert_list_equal
+from nose.tools import assert_is_none, assert_is_not_none, assert_list_equal
 from earthquake import USGSService
 from constants import SKIP_ACTUAL_SERVICE
 
 
 class TestUSGSService(object):
     """
-    `TestUSGSService` Unit Test Object. 
+    `TestUSGSService` Unit Test Object.
     """
 
     @classmethod
     def setup_class(cls):
+        """
+        Create object of class USGSService and mock requests.get
+        :return:
+        """
         cls.earthquake = USGSService()
         cls.mock_get_patcher = patch('earthquake.requests.get')
         cls.mock_get = cls.mock_get_patcher.start()
 
     @classmethod
     def teardown_class(cls):
+        """
+        Clean object created while setup
+        :return:
+        """
         cls.mock_get_patcher.stop()
 
     def test_request_ok(self):
+        """
+        Test if API response is not none when return value is OK
+        :return:
+        """
         self.mock_get.return_value.ok = True
 
         response = self.earthquake.make_request('version')
@@ -28,6 +43,10 @@ class TestUSGSService(object):
         assert_is_not_none(response)
 
     def test_request_none(self):
+        """
+        Test if API response is none when return value is not OK
+        :return:
+        """
         self.mock_get.return_value.ok = False
 
         response = self.earthquake.make_request('version')
@@ -37,19 +56,31 @@ class TestUSGSService(object):
 
 class TestUSGSServiceIntegration(object):
     """
-    `TestUSGSServiceIntegration` Unit Test Object. 
+    `TestUSGSServiceIntegration` Unit Test Object
     """
 
     @classmethod
     def setup_class(cls):
+        """
+        Create object of class USGSService
+        :return:
+        """
         cls.earthquake = USGSService()
 
     @classmethod
     def teardown_class(cls):
-        pass
+        """
+        Clean object created while setup
+        :return:
+        """
+        cls.earthquake = None
 
     @skipIf(SKIP_ACTUAL_SERVICE, 'Skipping tests that hit real service.')
     def test_query(self):
+        """
+        Test Structure of the JSON data returned from USGS API
+        :return:
+        """
         self.earthquake.ServiceParams = {'format': 'geojson', 'limit': 1, 'offset': 1}
         actual = self.earthquake.make_request('query')
         actual_keys = actual.json().keys()
@@ -61,7 +92,8 @@ class TestUSGSServiceIntegration(object):
                 "type": "FeatureCollection",
                 "metadata": {
                     "generated": 1506827476000,
-                    "url": "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&limit=1&offset=1",
+                    "url": "https://earthquake.usgs.gov/fdsnws/event/1/query?"
+                           "format=geojson&limit=1&offset=1",
                     "title": "USGS Earthquakes",
                     "status": 200,
                     "api": "1.5.8",
@@ -79,7 +111,8 @@ class TestUSGSServiceIntegration(object):
                             "updated": 1506827220492,
                             "tz": -480,
                             "url": "https://earthquake.usgs.gov/earthquakes/eventpage/ci38015992",
-                            "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=ci38015992&format=geojson",
+                            "detail": "https://earthquake.usgs.gov/fdsnws/event/1/query?"
+                                      "eventid=ci38015992&format=geojson",
                             "felt": "",
                             "cdi": "",
                             "mmi": "",

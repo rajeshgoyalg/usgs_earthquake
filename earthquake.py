@@ -1,9 +1,12 @@
+"""
+Earthquake Visualization
+"""
 import json
 import math
 import asyncio
 import concurrent.futures
-import requests
 import datetime
+import requests
 import matplotlib.pyplot as plot
 import pandas as pd
 from constants import SERVICE_URL, SERVICE_LIMIT
@@ -11,20 +14,20 @@ from constants import SERVICE_URL, SERVICE_LIMIT
 
 class USGSService:
     """
-    Create a new `USGSService` object. `USGSService` takes start and end date    
+    Create a new `USGSService` object. `USGSService` takes start and end date
     that specify the behaviour of the `USGSService` object:
     * `start_date`: accepts date in 'YYYY-MM-DD' format
-    * `end_date`: accepts date in 'YYYY-MM-DD' format    
+    * `end_date`: accepts date in 'YYYY-MM-DD' format
     """
 
-    Offset = 1
+    offset = 1
     ServiceParams = {}
 
     def __init__(self, start_date='', end_date=''):
         if start_date != "":
-            self.StartDate = start_date
+            self.start_date = start_date
         if end_date != "":
-            self.EndDate = end_date
+            self.end_date = end_date
 
     def check_api_version(self):
         """
@@ -39,19 +42,19 @@ class USGSService:
         """
         Query API for `count` endpoint.
         :return:
-         Long: Result Count for query 
+        Long: Result Count for query
         """
         self.ServiceParams['format'] = 'quakeml'
-        self.ServiceParams['starttime'] = self.StartDate
-        self.ServiceParams['endtime'] = self.EndDate
+        self.ServiceParams['starttime'] = self.start_date
+        self.ServiceParams['endtime'] = self.end_date
         result = self.make_request('count')
         return result.text
 
     def request_count(self):
         """
-        Get result count for API and determines the number of requests 
+        Get result count for API and determines the number of requests
         by dividing total count by limit
-        :return: 
+        :return:
         int: Returns total number of requests
         """
         record_count = self.get_record_count()
@@ -62,7 +65,7 @@ class USGSService:
         """
         Make API query request to USGS Service and return response
         :param method: String: API Method / endpoint
-        :return: 
+        :return:
         Object: Object of response
         """
         result = requests.get(SERVICE_URL + method, self.ServiceParams)
@@ -70,35 +73,39 @@ class USGSService:
 
     def create_request_params(self):
         """
-        Create a list of URLs params for building request 
+        Create a list of URLs params for building request
         :return: dictionary of params
         """
         params = []
         param = {
             'format': 'geojson',
-            'starttime': self.StartDate,
-            'endtime': self.EndDate,
+            'starttime': self.start_date,
+            'endtime': self.end_date,
             'limit': SERVICE_LIMIT
         }
         total_requests = self.request_count()
-        for x in range(total_requests):
-            param['offset'] = self.Offset
+        for request_number in range(total_requests):
+            param['offset'] = self.offset
             params.append(param)
             # increase offset to fetch next set of records
-            self.Offset = self.Offset + SERVICE_LIMIT
+            self.offset = self.offset + SERVICE_LIMIT
 
         return params
 
     async def make_async_request(self):
         """
-        Make Async request to USGS Service and return response. 
-        :return: 
+        Make Async request to USGS Service and return response.
+        :return:
         List: List of magnitude
         """
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
             loop = asyncio.get_event_loop()
             params = self.create_request_params()
-            futures = [loop.run_in_executor(executor, requests.get, SERVICE_URL + 'query', params[i]) for i in range(len(params))]
+            futures = [loop.run_in_executor(executor,
+                                            requests.get,
+                                            SERVICE_URL + 'query',
+                                            params[i])
+                       for i in range(len(params))]
 
             responses = []
             magnitudes = []
@@ -108,7 +115,8 @@ class USGSService:
                     responses.append(response)
                     for result in responses:
                         for row in result['features']:
-                            row["properties"].get("mag") and magnitudes.append(row['properties']['mag'])
+                            row["properties"].get("mag") and \
+                            magnitudes.append(row['properties']['mag'])
 
         return magnitudes
 
@@ -117,7 +125,7 @@ def validate_date(date_text):
     """
     Validate user input whether it is valid date format
     :param date_text: Date string
-    :return: 
+    :return:
     date: Date if valid date
     Exception: ValueError - Incorrect date format
     """
@@ -131,20 +139,21 @@ def visualize_earthquake(magnitudes):
     """
     Visualize earthquake magnitude data.
     It generates pandas data frame and plot histogram
-    :param magnitudes: 
-    :return: 
+    :param magnitudes:
+    :return:
     """
 
     # Plot a histogram.
-    n, bins, patch = plot.hist(magnitudes, histtype='step', range=(0, 10), bins=10)
+    nbins, bins, patch = plot.hist(magnitudes, histtype='bar', range=(0, 10), bins=10)
 
     # Draw histogram of the DataFrame’s series
     histogram = pd.DataFrame()
-    for i in range(0, len(n)):
+    for i in range(0, len(nbins)):
         magnitude_range = str(bins[i]) + " - " + str(bins[i + 1])
-        frequency = n[i]
-        percentage = round((n[i] / len(magnitudes)) * 100, 4) if magnitudes else 0
-        histogram = histogram.append(pd.Series([magnitude_range, frequency, percentage]), ignore_index=True)
+        frequency = nbins[i]
+        percentage = round((nbins[i] / len(magnitudes)) * 100, 4) if magnitudes else 0
+        histogram = histogram.append(pd.Series([magnitude_range, frequency, percentage]),
+                                     ignore_index=True)
 
     histogram.columns = ['Range of Magnitude', 'Frequency', 'Percentage']
     print(histogram)
@@ -158,6 +167,10 @@ def visualize_earthquake(magnitudes):
 
 
 def main():
+    """
+    Entry point for Earthquake Visualization.
+    :return: Visualization of earthquake data and pandas dataframe
+    """
     print('Welcome to Earthquake visualisation. Please provide date range for your search.')
     date_entry = input('Enter start date in YYYY-MM-DD format: ')
     start_date = validate_date(date_entry)
