@@ -85,7 +85,7 @@ class USGSService:
             'limit': SERVICE_LIMIT
         }
         total_requests = self.request_count()
-        for request_number in range(total_requests):
+        for _ in range(total_requests):
             param['offset'] = self.offset
             params.append(param)
             # increase offset to fetch next set of records
@@ -127,7 +127,11 @@ class USGSService:
                                 longitudes.append(row['geometry'].get('coordinates')[1])
                                 depths.append(row['geometry'].get('coordinates')[2])
 
-        earthquake_data = {'times': times, 'magnitudes': magnitudes, 'latitudes': latitudes, 'longitudes': longitudes, 'depths': depths}
+        earthquake_data = {'times': times,
+                           'magnitudes': magnitudes,
+                           'latitudes': latitudes,
+                           'longitudes': longitudes,
+                           'depths': depths}
         return earthquake_data
 
 
@@ -177,13 +181,13 @@ def visualize_relation_mag_time(magnitudes):
     """
 
     # Compute average magnitude
-    avMagnitude = sum(magnitudes) / len(magnitudes)
+    average_magnitude = sum(magnitudes) / len(magnitudes)
 
     # Plot magnitudes as a line graph
     plot.plot(magnitudes)
 
     # Add line for average magnitude
-    plot.plot([0, len(magnitudes)], [avMagnitude, avMagnitude])
+    plot.plot([0, len(magnitudes)], [average_magnitude, average_magnitude])
 
     plot.xlabel('Time')
     plot.ylabel('Magnitude')
