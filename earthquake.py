@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Earthquake Visualization
 """
@@ -109,16 +110,25 @@ class USGSService:
 
             responses = []
             magnitudes = []
+            times = []
+            latitudes = []
+            longitudes = []
+            depths = []
             for response in await asyncio.gather(*futures):
                 if response:
                     response = json.loads(response.text)
                     responses.append(response)
                     for result in responses:
                         for row in result['features']:
-                            row["properties"].get("mag") and \
-                            magnitudes.append(row['properties']['mag'])
+                            if row["properties"].get("mag"):
+                                magnitudes.append(row['properties']['mag'])
+                                times.append(row['properties']['time'])
+                                latitudes.append(row['geometry'].get('coordinates')[0])
+                                longitudes.append(row['geometry'].get('coordinates')[1])
+                                depths.append(row['geometry'].get('coordinates')[2])
 
-        return magnitudes
+        earthquake_data = {'times': times, 'magnitudes': magnitudes, 'latitudes': latitudes, 'longitudes': longitudes, 'depths': depths}
+        return earthquake_data
 
 
 def validate_date(date_text):
@@ -138,9 +148,9 @@ def validate_date(date_text):
 def visualize_earthquake(magnitudes):
     """
     Visualize earthquake magnitude data.
-    It generates pandas data frame and plot histogram
+    It generates pandas data frame
     :param magnitudes:
-    :return:
+    :return: dataframe
     """
 
     # Plot a histogram.
@@ -158,10 +168,79 @@ def visualize_earthquake(magnitudes):
     histogram.columns = ['Range of Magnitude', 'Frequency', 'Percentage']
     print(histogram)
 
+
+def visualize_relation_mag_time(magnitudes):
+    """
+    Visualize where the magnitudes of the earthquakes rises over time and then decreases
+    :param magnitudes:
+    :return: matplotlib plot
+    """
+
+    # Compute average magnitude
+    avMagnitude = sum(magnitudes) / len(magnitudes)
+
+    # Plot magnitudes as a line graph
+    plot.plot(magnitudes)
+
+    # Add line for average magnitude
+    plot.plot([0, len(magnitudes)], [avMagnitude, avMagnitude])
+
+    plot.xlabel('Time')
+    plot.ylabel('Magnitude')
+    plot.title('History of Magnitudes')
+
+    plot.show()
+    plot.clf()
+
+
+def visualize_distribution_mag(magnitudes):
+    """
+    Simple visualization of the distribution of data.
+    :param magnitudes:
+    :return:
+    """
+
+    # Plot histogram of magnitudes
+    plot.hist(magnitudes, histtype='bar', range=(0, 10), bins=10)
+
     # Plot magnitude Histogram
     plot.xlabel("Earthquake Magnitudes")
     plot.ylabel("Frequency")
     plot.title("Frequency by Magnitude")
+
+    plot.show()
+    plot.clf()
+
+
+def earthquake_corelation(magnitudes):
+    """
+    Know whether there is any relationship between the latitude and longitude of earthquakes.
+    :param magnitudes:
+    :return:
+    """
+    plot.scatter(magnitudes['longitudes'], magnitudes['latitudes'], c="g", alpha=0.5)
+
+    # Label Axes
+    plot.xlabel('Longitude')
+    plot.ylabel('Latitude')
+    plot.title('Corelation - Longitude and Latitude')
+
+    plot.show()
+    plot.clf()
+
+
+def earthquake_series(magnitudes):
+    """
+    Know whether there is any relationship between the magnitudes and depth of earthquakes.
+    :param magnitudes:
+    :return:
+    """
+    plot.scatter(magnitudes["magnitudes"], magnitudes["depths"], c="g", alpha=0.5)
+
+    plot.xlabel("Magnitude")
+    plot.ylabel("Depth (in meters)")
+    plot.title("Magnitude vs Depth")
+
     plot.show()
     plot.clf()
 
@@ -183,8 +262,12 @@ def main():
     # collect all magnitude data for data visualization
     loop = asyncio.get_event_loop()
     magnitudes = loop.run_until_complete(service.make_async_request())
+    visualize_earthquake(magnitudes['magnitudes'])
+    visualize_relation_mag_time(magnitudes['magnitudes'])
+    visualize_distribution_mag(magnitudes['magnitudes'])
+    earthquake_corelation(magnitudes)
+    earthquake_series(magnitudes)
 
-    visualize_earthquake(magnitudes)
 
 if __name__ == '__main__':
     main()

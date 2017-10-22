@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
     Earthquake - Unit and Integration Test cases
 """
